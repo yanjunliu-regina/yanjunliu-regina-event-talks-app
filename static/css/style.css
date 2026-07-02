@@ -735,7 +735,7 @@ body.light-theme .card-body code {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-.btn-card-tweet {
+.btn-card-tweet, .btn-card-copy {
     background-color: transparent;
     color: var(--text-muted);
     font-size: 14px;
@@ -746,6 +746,9 @@ body.light-theme .card-body code {
 }
 .btn-card-tweet:hover {
     color: var(--primary-color);
+}
+.btn-card-copy:hover {
+    color: var(--color-feature);
 }
 
 .btn-card-link {

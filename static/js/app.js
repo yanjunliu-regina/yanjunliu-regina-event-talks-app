@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     const refreshBtn = document.getElementById('refresh-btn');
     const refreshIcon = document.getElementById('refresh-icon');
+    const exportBtn = document.getElementById('export-btn');
     
     // Stats elements
     const statTotal = document.getElementById('stat-total');
@@ -85,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show loading state
         refreshIcon.classList.add('spinning');
         refreshBtn.disabled = true;
+        exportBtn.disabled = true;
         notesGrid.classList.add('hidden');
         emptyState.classList.add('hidden');
         loadingState.classList.remove('hidden');
@@ -98,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 calculateStats();
                 renderNotes();
                 showToast('Release notes updated successfully!');
+                exportBtn.disabled = false;
             } else {
                 throw new Error(data.error || 'Failed to fetch release notes');
             }
@@ -112,18 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             refreshIcon.classList.remove('spinning');
             refreshBtn.disabled = false;
+            if (updates.length > 0) {
+                exportBtn.disabled = false;
+            }
         }
     };
 
     // ==========================================================================
     // Render and Filter Logic
     // ==========================================================================
-    const renderNotes = () => {
-        loadingState.classList.add('hidden');
-        notesGrid.innerHTML = '';
-        
-        // Filter list
-        const filteredUpdates = updates.filter(up => {
+    const getFilteredUpdates = () => {
+        return updates.filter(up => {
             // Type match
             let matchesType = true;
             if (filterType !== 'all') {
@@ -146,6 +148,69 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return matchesType && matchesSearch;
         });
+    };
+
+    const copyUpdateToClipboard = (up, btn) => {
+        const textToCopy = `BigQuery Update [${up.type}] (${up.date}):\n${up.content_text}${up.link ? `\n\nRead more: ${up.link}` : ''}`;
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast("Copied to clipboard!");
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-clipboard-check" style="color: var(--color-feature);"></i> Copied';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+            }, 2000);
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+            showToast("Failed to copy text", "error");
+        });
+    };
+
+    const exportToCSV = () => {
+        const filtered = getFilteredUpdates();
+        if (filtered.length === 0) {
+            showToast("No updates to export", "error");
+            return;
+        }
+        
+        const escapeCSVValue = (val) => {
+            if (val === null || val === undefined) return '';
+            let formatted = val.toString().replace(/"/g, '""');
+            return `"${formatted}"`;
+        };
+        
+        let csvContent = "Date,Type,Content,Link\r\n";
+        
+        filtered.forEach(up => {
+            const row = [
+                escapeCSVValue(up.date),
+                escapeCSVValue(up.type),
+                escapeCSVValue(up.content_text),
+                escapeCSVValue(up.link)
+            ];
+            csvContent += row.join(",") + "\r\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filterStr = filterType !== 'all' ? `_${filterType}` : '';
+        link.setAttribute("href", url);
+        link.setAttribute("download", `bigquery_release_notes_${dateStr}${filterStr}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast(`Exported ${filtered.length} updates to CSV!`);
+    };
+
+    const renderNotes = () => {
+        loadingState.classList.add('hidden');
+        notesGrid.innerHTML = '';
+        
+        const filteredUpdates = getFilteredUpdates();
 
         if (filteredUpdates.length === 0) {
             notesGrid.classList.add('hidden');
@@ -182,6 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${up.content_html}
                 </div>
                 <div class="card-footer">
+                    <button class="btn-card-copy" title="Copy to clipboard">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
                     <button class="btn-card-tweet" title="Tweet this update">
                         <i class="fa-brands fa-x-twitter"></i> Tweet
                     </button>
@@ -196,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Card Selection Click (unless click is on a link, footer button, or is a text selection)
             card.addEventListener('click', (e) => {
                 if (window.getSelection().toString()) return; // Don't toggle selection if text is selected
-                if (e.target.closest('a') || e.target.closest('.btn-card-tweet')) return;
+                if (e.target.closest('a') || e.target.closest('.btn-card-tweet') || e.target.closest('.btn-card-copy')) return;
                 
                 toggleCardSelection(up.id);
             });
@@ -206,6 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tweetBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openTweetModal([up]);
+            });
+
+            // Copy button click inside card
+            const copyBtn = card.querySelector('.btn-card-copy');
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyUpdateToClipboard(up, copyBtn);
             });
 
             notesGrid.appendChild(card);
@@ -291,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     refreshBtn.addEventListener('click', fetchReleaseNotes);
+    exportBtn.addEventListener('click', exportToCSV);
 
     clearSelectionBtn.addEventListener('click', () => {
         selectedUpdates.clear();
