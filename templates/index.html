@@ -32,9 +32,14 @@
             </div>
             
             <div class="header-actions">
-                <button id="theme-toggle" class="btn-icon" title="Toggle Theme">
-                    <i class="fa-solid fa-sun"></i>
-                </button>
+                <div class="theme-switch-container">
+                    <i id="sun-icon" class="fa-solid fa-sun theme-switch-icon active"></i>
+                    <label class="theme-switch" for="theme-checkbox" title="Toggle Light/Dark Theme">
+                        <input type="checkbox" id="theme-checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <i id="moon-icon" class="fa-solid fa-moon theme-switch-icon"></i>
+                </div>
                 <button id="export-btn" class="btn-secondary" title="Export to CSV" disabled>
                     <i class="fa-solid fa-file-csv"></i>
                     <span>Export CSV</span>

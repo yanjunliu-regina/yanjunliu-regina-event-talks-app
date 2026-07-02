@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // DOM Elements
     const body = document.body;
-    const themeToggle = document.getElementById('theme-toggle');
+    const themeCheckbox = document.getElementById('theme-checkbox');
+    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = document.getElementById('moon-icon');
     const refreshBtn = document.getElementById('refresh-btn');
     const refreshIcon = document.getElementById('refresh-icon');
     const exportBtn = document.getElementById('export-btn');
@@ -62,16 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLightMode) {
             body.classList.remove('dark-theme');
             body.classList.add('light-theme');
-            themeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
+            themeCheckbox.checked = true;
+            sunIcon.classList.remove('active');
+            moonIcon.classList.add('active');
         } else {
             body.classList.remove('light-theme');
             body.classList.add('dark-theme');
-            themeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+            themeCheckbox.checked = false;
+            moonIcon.classList.remove('active');
+            sunIcon.classList.add('active');
         }
     };
 
-    themeToggle.addEventListener('click', () => {
-        isLightMode = !isLightMode;
+    themeCheckbox.addEventListener('change', () => {
+        isLightMode = themeCheckbox.checked;
         localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
         initTheme();
         showToast(isLightMode ? 'Light theme enabled' : 'Dark theme enabled');
